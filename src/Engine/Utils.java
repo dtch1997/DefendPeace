@@ -481,6 +481,8 @@ public class Utils
         unitAnimations.put(unitName, frames);
       }
     }
+    
+    long colorAdjustment = SpriteLibrary.getAdjustmentForPalette(palette);
 
     for( Entry<String, ImageFrame[]> entry : unitAnimations.entrySet() )
     {
@@ -490,8 +492,9 @@ public class Utils
       try
       {
         String fileOutStr = (facOutPath + "/" + unitName + "_map.png").replaceAll("\\-", "");
-        ImageIO.write(SpriteLibrary.joinBufferedImage(SpriteLibrary.paintItGray(frames), SpriteLibrary.baseSpriteSize,
-            SpriteLibrary.baseSpriteSize, flip), "png", new File(fileOutStr));
+        ImageIO.write(SpriteLibrary.joinBufferedImage(
+            SpriteLibrary.paintItGray(frames, colorAdjustment), SpriteLibrary.baseSpriteSize, SpriteLibrary.baseSpriteSize, flip
+            ), "png", new File(fileOutStr));
       }
       catch (IOException e)
       {

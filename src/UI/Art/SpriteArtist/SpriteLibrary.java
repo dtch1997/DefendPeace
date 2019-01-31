@@ -11,6 +11,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -608,17 +609,17 @@ public class SpriteLibrary
 
           if( shouldRecolor(tint) )
           {
-            if (null == palette.get(tint))
+            if( null == palette.get(tint) )
               palette.put(tint, 1);
             else
-            palette.put(tint, palette.get(tint) + 1);
+              palette.put(tint, palette.get(tint) + 1);
           }
         }
       }
     }
   }
-  
-  public static ImageFrame[] paintItGray(ImageFrame[] frames)
+
+  public static long getAdjustmentForPalette(Map<Color,Integer> palette)
   {
     int avgGrey = 0;
     for( Color g : defaultMapColors )
@@ -629,14 +630,31 @@ public class SpriteLibrary
       avgGrey += (R + G + B) / 3;
     }
     avgGrey /= defaultMapColors.length;
-    
+
+    long avgBrightnessTotal = 0, totalPixels = 0;
+    for( Entry<Color, Integer> entry : palette.entrySet() )
+    {
+      Color tint = entry.getKey();
+      totalPixels += entry.getValue();
+      int R = tint.getRed();
+      int G = tint.getGreen();
+      int B = tint.getBlue();
+      avgBrightnessTotal += ((R + G + B) * entry.getValue()) / 3;
+    }
+    long avgBrightness = avgBrightnessTotal / totalPixels;
+
+    long adjustment = avgGrey - avgBrightness;
+    System.out.println("    Adjusting frame brightness by: " + adjustment);
+    return adjustment;
+  }
+  
+  public static ImageFrame[] paintItGray(ImageFrame[] frames, long adjustment)
+  {
     Map<ImageFrame, ArrayList<XYCoord>> imageRecolorInfo = new HashMap<>();
-    ArrayList<Integer> avgBrightnesses = new ArrayList<>();
     
     for( ImageFrame frame : frames )
     {
       ArrayList<XYCoord> pixelsToRecolor = new ArrayList<>();
-      int avgBrightnessTotal = 0; 
       
       BufferedImage bi = frame.getImage();
       for( int x = 0; x < bi.getWidth(); ++x )
@@ -644,40 +662,19 @@ public class SpriteLibrary
         for( int y = 0; y < bi.getHeight(); ++y )
         {
           Color tint = new Color(bi.getRGB(x, y));
-          int R = tint.getRed();
-          int G = tint.getGreen();
-          int B = tint.getBlue();
           
           if( shouldRecolor(tint) )
           {
             pixelsToRecolor.add(new XYCoord(x, y));
-            avgBrightnessTotal += (R + G + B)/3;
           }
         }
       }
 
       if( pixelsToRecolor.size() == 0 )
       {
-        System.out.println("    no pixels to recolor");
-      }
-      else
-      {
-        int avgBrightness = avgBrightnessTotal / pixelsToRecolor.size();
-        avgBrightnesses.add(avgBrightness);
-        System.out.println("    Average frame brightness: " + avgBrightness);
+        System.out.println("    Frame has no recolorable pixels");
       }
       imageRecolorInfo.put(frame, pixelsToRecolor);
-    }
-
-    int adjustment = 0, total = 0;
-    for( int avg : avgBrightnesses )
-    {
-      total += avg;
-    }
-    if( avgBrightnesses.size() > 0 )
-    {
-      adjustment += avgGrey - (total / avgBrightnesses.size());
-      System.out.println("    Adjusting frame brightness by: " + adjustment);
     }
 
     for (ImageFrame frame : imageRecolorInfo.keySet())
@@ -692,11 +689,12 @@ public class SpriteLibrary
         int G = tint.getGreen();
         int B = tint.getBlue();
 
-        int adjustedHue = (R + G + B) / 3 + adjustment;
+        int adjustedHue = (int) ((R + G + B) / 3 + adjustment);
         int index = (int) (adjustedHue / (255.0 / defaultMapColors.length));
+//        index = Math.max(0, Math.min(index, defaultMapColors.length - 1));
         if (index < 0)
           bi.setRGB(xyc.xCoord, xyc.yCoord, Color.black.getRGB());
-        else if (index >= defaultMapColors.length - 1)
+        else if (index > defaultMapColors.length - 1)
           bi.setRGB(xyc.xCoord, xyc.yCoord, Color.white.getRGB());
         else
           bi.setRGB(xyc.xCoord, xyc.yCoord, defaultMapColors[index].getRGB());
