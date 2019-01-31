@@ -22,6 +22,7 @@ import javax.swing.ImageIcon;
 
 import CommandingOfficers.Commander;
 import CommandingOfficers.CommanderLibrary;
+import Engine.Driver;
 import Engine.XYCoord;
 import Terrain.Location;
 import Terrain.TerrainType;
@@ -418,10 +419,10 @@ public class SpriteLibrary
     System.out.println("creating " + key.unitTypeKey.toString() + " spriteset for CO " + key.commanderKey.myColor.toString());
     String filestr;
     UnitSpriteSet spriteSet;
-    filestr = "res/unit/" + key.unitTypeKey.toString().replaceAll("\\_", "") + "_map.png";
+    filestr = Driver.baseUnitPath + key.unitTypeKey.toString().replaceAll("\\_", "") + "_map.png";
     if( Commander.DEFAULT_SPRITE_KEY != faction )
     {
-      filestr = ("res/unit/grey/" + faction + "/" + key.unitTypeKey.toString().toLowerCase()).replaceAll("\\_", "")+ "_map.png";
+      filestr = (Driver.baseFactionPath + faction + "/" + key.unitTypeKey.toString().toLowerCase()).replaceAll("\\_", "")+ "_map.png";
     }
     spriteSet = new UnitSpriteSet(loadSpriteSheetFile(filestr), baseSpriteSize, baseSpriteSize,
         getMapUnitColors(key.commanderKey.myColor));
@@ -476,9 +477,9 @@ public class SpriteLibrary
     return Math.sqrt(weightR * r * r + weightG * g * g + weightB * b * b);
 }
 
-  public static BufferedImage createPaletteImage(Set<Color> paletteSet, int w, int h)
+  public static BufferedImage createPaletteImage(Map<Color,Integer> paletteSet, int w, int h)
   {
-    ArrayList<Color> palette = new ArrayList<Color>(paletteSet);
+    ArrayList<Color> palette = new ArrayList<Color>(paletteSet.keySet());
 
     // sort by greyness, so we cull the grayest things first
     palette.sort(new Comparator<Color>()
@@ -617,7 +618,7 @@ public class SpriteLibrary
     }
   }
   
-  public static ImageFrame[] paintItGray(ImageFrame[] frames, Set<Color> palette)
+  public static ImageFrame[] paintItGray(ImageFrame[] frames)
   {
     int avgGrey = 0;
     for( Color g : defaultMapColors )
@@ -687,7 +688,6 @@ public class SpriteLibrary
       for( XYCoord xyc : pixelsToRecolor )
       {
         Color tint = new Color(bi.getRGB(xyc.xCoord, xyc.yCoord));
-        palette.add(tint);
         int R = tint.getRed();
         int G = tint.getGreen();
         int B = tint.getBlue();

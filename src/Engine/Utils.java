@@ -6,7 +6,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Scanner;
 import java.util.Set;
@@ -433,7 +436,6 @@ public class Utils
         // Faction names always have spaces
         if( faction.contains(" ") )
         {
-          importFactions.add(faction);
           Matcher matcher = SpriteLibrary.factionNameToKey.matcher(faction);
           String facAbbrev;
           // if the faction is a real faction, pull out the first two initials, otherwise use the whole faction as key
@@ -441,12 +443,13 @@ public class Utils
             facAbbrev = (("" + matcher.group(1).charAt(0)) + matcher.group(2).charAt(0)).toLowerCase();
           else
             facAbbrev = faction;
-          
-          Set<Color> palette = paintFaction(inPath + faction, outPath + faction, facAbbrev, flip);
+
+          importFactions.add(matcher.group(2));
+          Map<Color,Integer> palette = paintFaction(inPath + faction, outPath + matcher.group(2), facAbbrev, flip);
 
           try
           {
-            String fileOutStr = ("res/unit/grey/" + matcher.group(1) +".png");
+            String fileOutStr = (outPath + matcher.group(1) +".png");
             ImageIO.write(SpriteLibrary.createPaletteImage(palette, 77, 77), "png", new File(fileOutStr));
           }
           catch (IOException e)
@@ -459,12 +462,13 @@ public class Utils
     }
   }
   
-  public static Set<Color> paintFaction(String facInPath, String facOutPath, String facAbbrev, boolean flip)
+  public static Map<Color,Integer> paintFaction(String facInPath, String facOutPath, String facAbbrev, boolean flip)
   {
     final File folder = new File(facInPath);
     new File(facOutPath).mkdirs();
 
-    Set<Color> palette = new HashSet<>();
+    Map<Color,Integer> palette = new HashMap<>();
+    Map<String,ImageFrame[]> unitAnimations = new HashMap<>();
 
     for( final File fileEntry : folder.listFiles() )
     {
@@ -472,20 +476,27 @@ public class Utils
       if( !fileEntry.isDirectory() && filestr.contains(".gif") )
       {
         String unitName = filestr.replaceFirst(facAbbrev, "").replace(".gif", "");
-        System.out.println("  " + unitName);
         ImageFrame[] frames = SpriteLibrary.loadAnimation(facInPath+"/"+filestr);
-        try
-        {
-          String fileOutStr = (facOutPath + "/" + unitName + "_map.png").replaceAll("\\-", "");
-          ImageIO.write(
-              SpriteLibrary.joinBufferedImage(SpriteLibrary.paintItGray(frames, palette), SpriteLibrary.baseSpriteSize, SpriteLibrary.baseSpriteSize, flip),
-              "png", new File(fileOutStr));
-        }
-        catch (IOException e)
-        {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
-        }
+        SpriteLibrary.getColorInfo(frames, palette);
+        unitAnimations.put(unitName, frames);
+      }
+    }
+
+    for( Entry<String, ImageFrame[]> entry : unitAnimations.entrySet() )
+    {
+      String unitName = entry.getKey();
+      System.out.println("  " + unitName);
+      ImageFrame[] frames = entry.getValue();
+      try
+      {
+        String fileOutStr = (facOutPath + "/" + unitName + "_map.png").replaceAll("\\-", "");
+        ImageIO.write(SpriteLibrary.joinBufferedImage(SpriteLibrary.paintItGray(frames), SpriteLibrary.baseSpriteSize,
+            SpriteLibrary.baseSpriteSize, flip), "png", new File(fileOutStr));
+      }
+      catch (IOException e)
+      {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
       }
     }
 
