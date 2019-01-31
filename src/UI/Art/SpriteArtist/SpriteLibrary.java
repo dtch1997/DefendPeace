@@ -563,6 +563,60 @@ public class SpriteLibrary
   static Color plume1 = new Color(255,62,62);
   static Color plume2 = new Color(142,32,32);
   static Color plume3 = new Color(215,54,54);
+  public static boolean shouldRecolor(Color tint)
+  {
+    int R = tint.getRed();
+    int G = tint.getGreen();
+    int B = tint.getBlue();
+    if ( // if it's a banned color...
+        tint.equals(skinlight) || 
+        tint.equals(skinligh2) || 
+        tint.equals(skindark) ||
+        tint.equals(ARskinlight) || 
+        tint.equals(beaklight) ||
+        tint.equals(beakdark) ||
+        tint.equals(beakdar2) ||
+        tint.equals(visor) ||
+        // or JS's plume
+        tint.equals(plume1) ||
+        tint.equals(plume2) ||
+        tint.equals(plume3) ||
+        // or transparent
+        ((Long.MAX_VALUE & tint.getRGB()) <= 0) ||
+        // or grey
+        (
+        Math.abs(R - G) < 20 &&
+        Math.abs(R - B) < 20 &&
+        Math.abs(G - B) < 20
+        )
+       ) // don't recolor it
+      return false;
+    return true;
+  }
+  
+  public static void getColorInfo(ImageFrame[] frames, Map<Color,Integer> palette)
+  {
+    for( ImageFrame frame : frames )
+    {
+      BufferedImage bi = frame.getImage();
+      for( int x = 0; x < bi.getWidth(); ++x )
+      {
+        for( int y = 0; y < bi.getHeight(); ++y )
+        {
+          Color tint = new Color(bi.getRGB(x, y));
+
+          if( shouldRecolor(tint) )
+          {
+            if (null == palette.get(tint))
+              palette.put(tint, 1);
+            else
+            palette.put(tint, palette.get(tint) + 1);
+          }
+        }
+      }
+    }
+  }
+  
   public static ImageFrame[] paintItGray(ImageFrame[] frames, Set<Color> palette)
   {
     int avgGrey = 0;
@@ -589,34 +643,11 @@ public class SpriteLibrary
         for( int y = 0; y < bi.getHeight(); ++y )
         {
           Color tint = new Color(bi.getRGB(x, y));
-          boolean setGray = true;
           int R = tint.getRed();
           int G = tint.getGreen();
           int B = tint.getBlue();
-          if ( // if it's a banned color...
-              tint.equals(skinlight) || 
-              tint.equals(skinligh2) || 
-              tint.equals(skindark) ||
-              tint.equals(ARskinlight) || 
-              tint.equals(beaklight) ||
-              tint.equals(beakdark) ||
-              tint.equals(beakdar2) ||
-              tint.equals(visor) ||
-              // or JS's plume
-              tint.equals(plume1) ||
-              tint.equals(plume2) ||
-              tint.equals(plume3) ||
-              // ...or grey
-              (
-              Math.abs(R - G) < 20 &&
-              Math.abs(R - B) < 20 &&
-              Math.abs(G - B) < 20
-              )
-             ) // don't recolor it
-            setGray = false;
-
-          // Also, ignore transparent pixels
-          if( setGray && (Long.MAX_VALUE & bi.getRGB(x, y)) > 0 )
+          
+          if( shouldRecolor(tint) )
           {
             pixelsToRecolor.add(new XYCoord(x, y));
             avgBrightnessTotal += (R + G + B)/3;
