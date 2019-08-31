@@ -13,6 +13,7 @@ import Units.UnitModel;
 /** Allows us to add units to a CO's production capabilities on the fly. */
 public class UnitProductionModifier implements COModifier
 {
+  private static final long serialVersionUID = 1L;
   private Map<TerrainType, Set<UnitModel>> productionMods = null; 
 
   public UnitProductionModifier(TerrainType terrain, UnitModel model)
@@ -34,7 +35,7 @@ public class UnitProductionModifier implements COModifier
   }
 
   @Override
-  public void apply(Commander commander)
+  public void applyChanges(Commander commander)
   {
     for(TerrainType tt : productionMods.keySet() )
     {
@@ -66,7 +67,7 @@ public class UnitProductionModifier implements COModifier
   }
 
   @Override
-  public void revert(Commander commander)
+  public void revertChanges(Commander commander)
   {
     for( TerrainType tt : productionMods.keySet() )
     {

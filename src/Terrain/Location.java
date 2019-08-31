@@ -1,14 +1,16 @@
 package Terrain;
 
 import java.util.ArrayDeque;
+import java.io.Serializable;
 
 import CommandingOfficers.Commander;
 import Engine.XYCoord;
 import Terrain.Environment.Weathers;
 import Units.Unit;
 
-public class Location
+public class Location implements Serializable
 {
+  private static final long serialVersionUID = 1L;
   private Environment environs = null;
   private Commander owner = null;
   private Unit resident = null;

@@ -2,6 +2,7 @@ package UI.Art.SpriteArtist;
 
 import java.awt.Dimension;
 
+import UI.InfoController;
 import UI.InputHandler.InputAction;
 import UI.MainUIController;
 import UI.MapView;
@@ -14,7 +15,7 @@ public class SpriteEngine implements GraphicsEngine
   @Override
   public IView getMainUIView(MainUIController control)
   {
-    return new SpriteMainUIView(control);
+    return new MainUIView(control);
   }
 
   @Override
@@ -33,5 +34,11 @@ public class SpriteEngine implements GraphicsEngine
   public Dimension getScreenDimensions()
   {
     return SpriteOptions.getScreenDimensions();
+  }
+
+  @Override
+  public IView createInfoView(InfoController control)
+  {
+    return new InfoView(control);
   }
 }

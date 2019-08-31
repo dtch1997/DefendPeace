@@ -2,13 +2,14 @@ package Units;
 
 import java.util.Vector;
 
-import Engine.GameAction.ActionType;
+import Engine.UnitActionType;
 import Units.MoveTypes.FloatLight;
 import Units.MoveTypes.MoveType;
 import Units.Weapons.WeaponModel;
 
 public class LanderModel extends UnitModel
 {
+  private static final long serialVersionUID = 1L;
   private static final int UNIT_COST = 12000;
   private static final int MAX_FUEL = 99;
   private static final int IDLE_FUEL_BURN = 1;
@@ -16,9 +17,7 @@ public class LanderModel extends UnitModel
   private static final int MOVE_POWER = 6;
 
   private static final MoveType moveType = new FloatLight();
-  // TODO: Currently, transports can unload units wherever the transport happens to be, so long as there is valid terrain for the units to end up on.
-  // As the source material limits copters to land unloading and landers to shoals, it stands to reason we should support that limitation.
-  private static final ActionType[] actions = { ActionType.UNLOAD, ActionType.WAIT };
+  private static final UnitActionType[] actions = UnitActionType.TRANSPORT_ACTIONS;
 
   public LanderModel()
   {

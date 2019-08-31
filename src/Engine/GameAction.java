@@ -2,6 +2,7 @@ package Engine;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 import CommandingOfficers.Commander;
@@ -11,11 +12,15 @@ import Engine.GameEvents.CaptureEvent;
 import Engine.GameEvents.CommanderAbilityEvent;
 import Engine.GameEvents.CommanderDefeatEvent;
 import Engine.GameEvents.CreateUnitEvent;
+import Engine.GameEvents.GameEvent;
 import Engine.GameEvents.GameEventQueue;
+import Engine.GameEvents.HealUnitEvent;
 import Engine.GameEvents.LoadEvent;
-import Engine.GameEvents.MoveEvent;
+import Engine.GameEvents.MassDamageEvent;
 import Engine.GameEvents.ResupplyEvent;
 import Engine.GameEvents.UnitDieEvent;
+import Engine.GameEvents.UnitJoinEvent;
+import Engine.GameEvents.UnitTransformEvent;
 import Engine.GameEvents.UnloadEvent;
 import Terrain.GameMap;
 import Terrain.Location;
@@ -29,11 +34,6 @@ import Units.UnitModel;
  */
 public interface GameAction
 {
-  public enum ActionType
-  {
-    ATTACK, CAPTURE, LOAD, RESUPPLY, UNLOAD, WAIT, UNITPRODUCTION, OTHER
-  }
-
   /**
    * Returns a GameEventQueue with the events that make up this action. If the action
    * was constructed incorrectly, this should return an empty GameEventQueue.
@@ -41,7 +41,7 @@ public interface GameAction
   public abstract GameEventQueue getEvents(MapMaster map);
   public abstract XYCoord getMoveLocation();
   public abstract XYCoord getTargetLocation();
-  public abstract ActionType getType();
+  public abstract UnitActionType getType();
 
   // ==========================================================
   //   Concrete Action type classes.
@@ -90,19 +90,17 @@ public interface GameAction
       int attackRange = -1;
       boolean isValid = true;
       isValid &= attacker != null && !attacker.isTurnOver;
-      isValid &= (null != gameMap) && (gameMap.isLocationValid(attackLocation));
+      isValid &= (null != gameMap) && (gameMap.isLocationValid(attackLocation)) && gameMap.isLocationValid(moveCoord);
       isValid &= (movePath != null) && (movePath.getPathLength() > 0);
       if( isValid )
       {
-        Location moveLocation = gameMap.getLocation(moveCoord);
-        defender = gameMap.getLocation(attackLocation).getResident();
         attackRange = Math.abs(moveCoord.xCoord - attackLocation.xCoord)
             + Math.abs(moveCoord.yCoord - attackLocation.yCoord);
 
         boolean moved = attacker.x != moveCoord.xCoord || attacker.y != moveCoord.yCoord;
+        isValid &= (gameMap.getLocation(attackLocation).getResident() == defender);
         isValid &= (null != defender) && attacker.canAttack(defender.model, attackRange, moved);
-        isValid &= attacker.CO.isEnemy(defender.CO);
-        isValid &= (null == moveLocation.getResident()) || (attacker == moveLocation.getResident());
+        isValid &= (null != defender) && attacker.CO.isEnemy(defender.CO);
       }
 
       if( isValid )
@@ -153,16 +151,16 @@ public interface GameAction
     }
 
     @Override
-    public ActionType getType()
-    {
-      return GameAction.ActionType.ATTACK;
-    }
-
-    @Override
     public String toString()
     {
       return String.format("[Attack %s with %s after moving to %s]",
           defender.toStringWithLocation(), attacker.toStringWithLocation(), moveCoord );
+    }
+
+    @Override
+    public UnitActionType getType()
+    {
+      return UnitActionType.ATTACK;
     }
   } // ~AttackAction
 
@@ -226,15 +224,15 @@ public interface GameAction
     }
 
     @Override
-    public ActionType getType()
-    {
-      return GameAction.ActionType.UNITPRODUCTION;
-    }
-
-    @Override
     public String toString()
     {
       return String.format("[Produce %s at %s]", what, where);
+    }
+
+    @Override
+    public UnitActionType getType()
+    {
+      return null;
     }
   } // ~UnitProductionAction
 
@@ -360,24 +358,24 @@ public interface GameAction
     }
 
     @Override
-    public ActionType getType()
-    {
-      return GameAction.ActionType.CAPTURE;
-    }
-
-    @Override
     public String toString()
     {
       return String.format("[Capture %s at %s with %s]", propertyType, movePathEnd, actor.toStringWithLocation());
+    }
+
+    @Override
+    public UnitActionType getType()
+    {
+      return UnitActionType.CAPTURE;
     }
   } // ~CaptureAction
 
   // ===========  WaitAction  =================================
   public static class WaitAction implements GameAction
   {
-    private Path movePath;
-    private XYCoord waitLoc = null;
-    private Unit actor = null;
+    private final Path movePath;
+    private final XYCoord waitLoc;
+    private final Unit actor;
 
     public WaitAction(Unit unit, Path path)
     {
@@ -388,6 +386,8 @@ public interface GameAction
         // Store the destination for later.
         waitLoc = new XYCoord(path.getEnd().x, path.getEnd().y);
       }
+      else
+        waitLoc = null;
     }
 
     @Override
@@ -430,15 +430,15 @@ public interface GameAction
     }
 
     @Override
-    public ActionType getType()
-    {
-      return GameAction.ActionType.WAIT;
-    }
-
-    @Override
     public String toString()
     {
       return String.format("[Move %s to %s]", actor.toStringWithLocation(), waitLoc);
+    }
+
+    @Override
+    public UnitActionType getType()
+    {
+      return UnitActionType.WAIT;
     }
   } // ~WaitAction
 
@@ -516,15 +516,15 @@ public interface GameAction
     }
 
     @Override
-    public ActionType getType()
-    {
-      return GameAction.ActionType.LOAD;
-    }
-
-    @Override
     public String toString()
     {
       return String.format("[Load %s into %s]", passenger.toStringWithLocation(), transport.toStringWithLocation());
+    }
+
+    @Override
+    public UnitActionType getType()
+    {
+      return UnitActionType.LOAD;
     }
   } // ~LoadAction
 
@@ -635,17 +635,104 @@ public interface GameAction
     }
 
     @Override
-    public ActionType getType()
+    public String toString()
     {
-      return GameAction.ActionType.UNLOAD;
+      return String.format("[Unload from %s]", actor.toStringWithLocation());
+    }
+
+    @Override
+    public UnitActionType getType()
+    {
+      return UnitActionType.UNLOAD;
+    }
+  } // ~UnloadAction
+
+  // ===========  UnitJoinAction  =================================
+  // A unit join action will combine a unit into a damaged unit to restore its HP. Any overflow HP is converted back into funds.
+  public static class UnitJoinAction implements GameAction
+  {
+    private Unit donor;
+    Path movePath;
+    private XYCoord pathEnd = null;
+    private Unit recipient;
+
+    public UnitJoinAction(GameMap gameMap, Unit actor, Path path)
+    {
+      donor = actor;
+      movePath = path;
+      if( (null != movePath) && (movePath.getPathLength() > 0 ))
+      {
+        pathEnd = new XYCoord(movePath.getEnd().x, movePath.getEnd().y);
+        if( (null != gameMap) && gameMap.isLocationValid(pathEnd) )
+        {
+          recipient = gameMap.getLocation(pathEnd).getResident();
+        }
+      }
+    }
+
+    @Override
+    public GameEventQueue getEvents(MapMaster gameMap)
+    {
+      // UNITJOIN actions consist of
+      //   MOVE
+      //   JOIN
+      GameEventQueue unitJoinEvents = new GameEventQueue();
+
+      // Validate input
+      boolean isValid = true;
+      isValid &= (null != donor) && !donor.isTurnOver;
+      isValid &= (null != movePath) && (movePath.getPathLength() > 0);
+      isValid &= (null != gameMap);
+      if( isValid )
+      {
+        pathEnd = new XYCoord(movePath.getEnd().x, movePath.getEnd().y);
+        isValid &= gameMap.isLocationValid(pathEnd);
+
+        if( isValid )
+        {
+          // Find the unit we want to join.
+          recipient = gameMap.getLocation(pathEnd).getResident();
+          isValid &= (null != recipient) && (recipient.getHP() < recipient.model.maxHP);
+        }
+      }
+
+      // Create events.
+      if( isValid )
+      {
+        // Move to the recipient, if we don't get blocked.
+        if( Utils.enqueueMoveEvent(gameMap, donor, movePath, unitJoinEvents) )
+        {
+          // Combine forces.
+          unitJoinEvents.add(new UnitJoinEvent(donor, recipient));
+        }
+      }
+      return unitJoinEvents;
+    }
+
+    @Override
+    public XYCoord getMoveLocation()
+    {
+      return pathEnd;
+    }
+
+    @Override
+    public XYCoord getTargetLocation()
+    {
+      return pathEnd;
     }
 
     @Override
     public String toString()
     {
-      return String.format("[Unload from %s]", actor.toStringWithLocation());
+      return String.format("[Join %s into %s]", donor.toStringWithLocation(), recipient.toStringWithLocation());
     }
-  } // ~UnloadAction
+
+    @Override
+    public UnitActionType getType()
+    {
+      return UnitActionType.JOIN;
+    }
+  } // ~UnitJoinAction
 
   // ===========  ResupplyAction  =================================
   // A resupply action will refill fuel and ammunition for any adjacent friendly units.
@@ -722,9 +809,15 @@ public interface GameAction
         // Note that movePath being null is OK for ResupplyAction when it is being re-used.
         if( movePath != null )
         {
-          eventSequence.add(new MoveEvent(unitActor, movePath));
+          // If we should be blocked, don't resupply anything.
+          if( !Utils.enqueueMoveEvent(map, unitActor, movePath, eventSequence) )
+            isValid = false; // isValid is used to signal pre-emption here rather than a malformed action.
+                             // Strange control flow stems from ResupplyAction's dual purpose. 
         }
+      }
 
+      if( isValid )
+      {
         // Get the adjacent map locations.
         ArrayList<XYCoord> locations = Utils.findLocationsInRange(map, supplyLocation, 1);
 
@@ -761,17 +854,108 @@ public interface GameAction
     }
 
     @Override
-    public ActionType getType()
+    public String toString()
     {
-      return GameAction.ActionType.RESUPPLY;
+      return String.format("[Resupply units adjacent to %s with %s]", myLocation(), unitActor.toStringWithLocation());
+    }
+
+    @Override
+    public UnitActionType getType()
+    {
+      return UnitActionType.RESUPPLY;
+    }
+  } // ~ResupplyAction
+
+  // ===========  RepairUnitAction  ===============================
+  public static class RepairUnitAction implements GameAction
+  {
+    private Path movePath;
+    private XYCoord startCoord;
+    private XYCoord moveCoord;
+    private XYCoord repairCoord;
+    Unit benefactor;
+    Unit beneficiary;
+
+    public RepairUnitAction(Unit actor, Path path, Unit target)
+    {
+      benefactor = actor;
+      beneficiary = target;
+      movePath = path;
+      if( benefactor != null && null != beneficiary )
+      {
+        startCoord = new XYCoord(actor.x, actor.y);
+        repairCoord = new XYCoord(target.x, target.y);
+      }
+      if( null != path && (path.getEnd() != null) )
+      {
+        moveCoord = new XYCoord(movePath.getEnd().x, movePath.getEnd().y);
+      }
+    }
+
+    @Override
+    public GameEventQueue getEvents(MapMaster gameMap)
+    {
+      // Repair actions consist of
+      //   MOVE
+      //   HEAL
+      //   RESUPPLY
+      GameEventQueue repairEvents = new GameEventQueue();
+
+      boolean isValid = true;
+
+      if( (null != gameMap) && (null != startCoord) && (null != repairCoord) &&
+          gameMap.isLocationValid(startCoord) && gameMap.isLocationValid(repairCoord) )
+      {
+        isValid &= benefactor != null && !benefactor.isTurnOver;
+        isValid &= isValid && null != beneficiary && !benefactor.CO.isEnemy(beneficiary.CO);
+        isValid &= (movePath != null) && (movePath.getPathLength() > 0);
+      }
+      else
+        isValid = false;
+
+      if( isValid )
+      {
+        Location moveLocation = gameMap.getLocation(moveCoord);
+        isValid &= (null == moveLocation.getResident()) || (benefactor == moveLocation.getResident());
+      }
+
+      if( isValid )
+      {
+        if( Utils.enqueueMoveEvent(gameMap, benefactor, movePath, repairEvents) )
+        {
+          // No surprises in the fog.
+          repairEvents.add(new HealUnitEvent(beneficiary, 1, benefactor.CO)); // As this is a unit action, there's no usecase to vary this yet
+          repairEvents.add(new ResupplyEvent(beneficiary));
+        }
+      }
+      return repairEvents;
+    }
+
+    @Override
+    public XYCoord getMoveLocation()
+    {
+      return moveCoord;
+    }
+
+    @Override
+    public XYCoord getTargetLocation()
+    {
+      return repairCoord;
     }
 
     @Override
     public String toString()
     {
-      return String.format("[Resupply units adjacent to %s with %s]", myLocation(), unitActor.toStringWithLocation());
+      return String.format("[Move %s to %s and heal %s]",
+          benefactor.toStringWithLocation(), moveCoord, beneficiary.toStringWithLocation());
     }
-  } // ~ResupplyAction
+
+    @Override
+    public UnitActionType getType()
+    {
+      return UnitActionType.REPAIR_UNIT;
+    }
+  } // ~RepairUnitAction
 
   // ===========  AbilityAction  =================================
   public static class AbilityAction implements GameAction
@@ -812,17 +996,170 @@ public interface GameAction
     }
 
     @Override
-    public ActionType getType()
+    public String toString()
     {
-      // Use OTHER, just because it doesn't correspond to a normal unit-based
-      // action with an actor, target location, etc.
-      return GameAction.ActionType.OTHER;
+      return String.format("[Perform CO Ability %s]", myAbility);
+    }
+
+    @Override
+    public UnitActionType getType()
+    {
+      return null;
+    }
+  } // ~AbilityAction
+  
+  // ===========  UnitTransformAction  =================================
+  /** Effectively a WAIT, but the unit ends up as a different unit at the end of it. */
+  public static class TransformAction extends WaitAction
+  {
+    private UnitActionType.Transform type;
+    Unit actor;
+
+    public TransformAction(Unit unit, Path path, UnitActionType.Transform pType)
+    {
+      super(unit, path);
+      type = pType;
+      actor = unit;
+    }
+
+    @Override
+    public GameEventQueue getEvents(MapMaster gameMap)
+    {
+      GameEventQueue transformEvents = super.getEvents(gameMap);
+      
+      if( transformEvents.size() > 0 ) // if we successfully made a move action
+      {
+        GameEvent moveEvent = transformEvents.peek();
+        if (moveEvent.getEndPoint().equals(getMoveLocation())) // make sure we shouldn't be pre-empted
+        {
+          transformEvents.add(new UnitTransformEvent(actor, type.destinationType));
+        }
+      }
+      return transformEvents;
+    }
+    
+    @Override
+    public String toString()
+    {
+      return String.format("[Move %s to %s and transform to %s]", actor.toStringWithLocation(), getMoveLocation(), type.destinationType);
+    }
+
+    @Override
+    public UnitActionType getType()
+    {
+      return type;
+    }
+  } // ~TransformAction
+  
+  // ===========  ExplodeAction  =================================
+  /** Effectively a WAIT, but the unit explodes at the end of it. */
+  public static class ExplodeAction extends WaitAction
+  {
+    private UnitActionType.Explode type;
+    Unit actor;
+
+    public ExplodeAction(Unit unit, Path path, UnitActionType.Explode pType)
+    {
+      super(unit, path);
+      type = pType;
+      actor = unit;
+    }
+
+    @Override
+    public GameEventQueue getEvents(MapMaster gameMap)
+    {
+      GameEventQueue explodeEvents = super.getEvents(gameMap);
+      
+      if( explodeEvents.size() > 0 ) // if we successfully made a move action
+      {
+        GameEvent moveEvent = explodeEvents.peek();
+        if (moveEvent.getEndPoint().equals(getMoveLocation())) // make sure we shouldn't be pre-empted
+        {
+          explodeEvents.add(new UnitDieEvent(actor)); // If you explode, you die
+
+          HashSet<Unit> victims = new HashSet<Unit>(); // Find all of our unlucky participants
+          for (XYCoord coord : Utils.findLocationsInRange(gameMap, getMoveLocation(), type.range))
+          {
+            Unit victim = gameMap.getLocation(coord).getResident();
+            if (null != victim && victim != actor) // Since you're already dead when you explode, you can't get hurt in the explosion
+            {
+              victims.add(victim);
+            }
+          }
+
+          explodeEvents.addFirst(new MassDamageEvent(victims, type.damage, false));
+          if( actor.CO.units.size() == 1 )
+          {
+            // CO is out of units. Too bad.
+            explodeEvents.add(new CommanderDefeatEvent(actor.CO));
+          }
+        }
+      }
+      return explodeEvents;
+    }
+    
+    @Override
+    public String toString()
+    {
+      return String.format("[Move %s to %s and explode]", actor.toStringWithLocation(), getMoveLocation());
+    }
+
+    @Override
+    public UnitActionType getType()
+    {
+      return type;
+    }
+  } // ~TransformAction
+
+  // ===========  UnitDeleteAction  =================================
+  /** Removes the unit. Only allows deletion in place */
+  public static class UnitDeleteAction implements GameAction
+  {
+    final Unit actor;
+    final XYCoord destination;
+    
+    public UnitDeleteAction(Unit unit)
+    {
+      actor = unit;
+      destination = new XYCoord(unit.x, unit.y);
+    }
+
+    @Override
+    public GameEventQueue getEvents(MapMaster gameMap)
+    {
+      GameEventQueue eventSequence = new GameEventQueue();
+      eventSequence.add(new UnitDieEvent(actor));
+      // The unit died; check if the Commander is defeated.
+      if( actor.CO.units.size() == 1 )
+      {
+        // CO is out of units. Too bad.
+        eventSequence.add(new CommanderDefeatEvent(actor.CO));
+      }
+      return eventSequence;
     }
 
     @Override
     public String toString()
     {
-      return String.format("[Perform CO Ability %s]", myAbility);
+      return String.format("[Delete %s in place]", actor.toStringWithLocation());
     }
-  } // ~AbilityAction
+
+    @Override
+    public UnitActionType getType()
+    {
+      return UnitActionType.DELETE;
+    }
+
+    @Override
+    public XYCoord getMoveLocation()
+    {
+      return destination;
+    }
+
+    @Override
+    public XYCoord getTargetLocation()
+    {
+      return destination;
+    }
+  } // ~UnitDeleteAction
 }

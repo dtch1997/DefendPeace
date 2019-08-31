@@ -4,20 +4,21 @@ import java.util.ArrayList;
 import java.util.Vector;
 
 import Engine.GameAction;
-import Engine.GameAction.ActionType;
+import Engine.UnitActionType;
 import Units.MoveTypes.MoveType;
 import Units.MoveTypes.Tread;
 import Units.Weapons.WeaponModel;
 
 public class APCModel extends UnitModel
 {
+  private static final long serialVersionUID = 1L;
   private static final int UNIT_COST = 5000;
   private static final int MAX_FUEL = 70;
   private static final int IDLE_FUEL_BURN = 0;
   private static final int VISION_RANGE = 1;
   private static final int MOVE_POWER = 6;
   private static final MoveType moveType = new Tread();
-  private static final ActionType[] actions = { ActionType.RESUPPLY, ActionType.UNLOAD, ActionType.WAIT };
+  private static final UnitActionType[] actions = UnitActionType.APC_ACTIONS;
 
   public APCModel()
   {

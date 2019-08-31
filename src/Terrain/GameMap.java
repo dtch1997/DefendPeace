@@ -1,11 +1,14 @@
 package Terrain;
 
+import java.io.Serializable;
+
 import Engine.Path;
 import Engine.XYCoord;
 import Units.Unit;
 
-public abstract class GameMap
+public abstract class GameMap implements Serializable
 {
+  private static final long serialVersionUID = 1L;
   public final int mapWidth;
   public final int mapHeight;
   public CommandingOfficers.Commander[] commanders;

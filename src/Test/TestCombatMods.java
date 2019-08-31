@@ -1,9 +1,10 @@
 package Test;
 
+import CommandingOfficers.Cinder;
 import CommandingOfficers.Commander;
-import CommandingOfficers.CommanderCinder;
-import CommandingOfficers.CommanderVenge;
+import CommandingOfficers.Venge;
 import Engine.GameAction;
+import Engine.GameScenario;
 import Engine.Utils;
 import Engine.Combat.BattleSummary;
 import Engine.Combat.CombatEngine;
@@ -22,8 +23,9 @@ public class TestCombatMods extends TestCase
   /** Make two COs and a MapMaster to use with this test case. */
   private void setupTest()
   {
-    cinder = new CommanderCinder();
-    venge = new CommanderVenge();
+    GameScenario scn = new GameScenario();
+    cinder = new Cinder(scn.rules);
+    venge = new Venge(scn.rules);
     Commander[] cos = { cinder, venge };
 
     testMap = new MapMaster(cos, MapLibrary.getByName("Firing Range"));

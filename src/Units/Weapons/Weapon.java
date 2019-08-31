@@ -1,19 +1,13 @@
 package Units.Weapons;
 
+import java.io.Serializable;
 import Units.UnitModel;
-import Units.Weapons.Damage.DSDamage;
-import Units.Weapons.Damage.DamageStrategy;
-import Units.Weapons.Damage.DoRDamage;
-import Units.Weapons.Damage.BHRDamage;
 
-public class Weapon
+public class Weapon implements Serializable
 {
-
+  private static final long serialVersionUID = 1L;
   public WeaponModel model;
   public int ammo;
-  public static DamageStrategy[] strategies = {new BHRDamage(), new DSDamage(), new DoRDamage()};
-  public static String[] stratDescriptions = {strategies[0].getDescription(), strategies[1].getDescription(), strategies[2].getDescription()};
-  public static int currentStrategy = 0;
 
   public Weapon(WeaponModel model)
   {
@@ -28,7 +22,7 @@ public class Weapon
   {
     if( ammo == 0 || defender == null )
       return 0;
-    return strategies[currentStrategy].getDamage(model, defender);
+    return WeaponModel.getDamage(model, defender);
   }
 
   /**
@@ -38,7 +32,7 @@ public class Weapon
   {
     if( defender != null )
     {
-      if( (range >= model.minRange) && (range <= model.maxRange) )
+      if( (ammo > 0) && (range >= model.minRange) && (range <= model.maxRange) )
         return getDamage(defender);
     }
     return 0;

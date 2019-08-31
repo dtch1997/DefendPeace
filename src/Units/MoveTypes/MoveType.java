@@ -1,5 +1,6 @@
 package Units.MoveTypes;
 
+import java.io.Serializable;
 import java.util.EnumMap;
 import java.util.HashMap;
 
@@ -7,8 +8,10 @@ import Terrain.Environment;
 import Terrain.Environment.Weathers;
 import Terrain.TerrainType;
 
-public class MoveType
+public class MoveType implements Serializable
 {
+  private static final long serialVersionUID = 1L;
+
   protected final Integer IMPASSABLE = 99;
 
   // A 2-layer map. Map Weathers to a mapping of Terrains-to-cost.
@@ -76,7 +79,7 @@ public class MoveType
   }
 
   /** Set the move cost for this terrain for all weather conditions. Useful for marking a terrain as impassable. */
-  protected void setMoveCost(TerrainType terrain, int cost)
+  public void setMoveCost(TerrainType terrain, int cost)
   {
     for( Weathers w : Weathers.values() )
     {
@@ -88,8 +91,7 @@ public class MoveType
   /** Convenience class to allow easy manipulation of move costs. */
   protected class MoveCostByTerrain extends HashMap<TerrainType, Integer>
   {
-    /** We don't actually serialize this map, but declaring this prevents a warning. */
-    private static final long serialVersionUID = 2956827533548597328L;
+    private static final long serialVersionUID = 1L;
 
     public MoveCostByTerrain(int moveCost)
     {
@@ -136,5 +138,5 @@ public class MoveType
           setMoveCost(terrain, moveCost);
       }
     }
-  }
+  } //~MoveCostByTerrain
 }

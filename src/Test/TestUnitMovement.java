@@ -1,9 +1,10 @@
 package Test;
 
 import CommandingOfficers.Commander;
-import CommandingOfficers.CommanderPatch;
-import CommandingOfficers.CommanderStrong;
+import CommandingOfficers.Patch;
+import CommandingOfficers.Strong;
 import Engine.GameAction;
+import Engine.GameScenario;
 import Engine.Path;
 import Engine.Utils;
 import Engine.XYCoord;
@@ -22,8 +23,9 @@ public class TestUnitMovement extends TestCase
   /** Make two COs and a MapMaster to use with this test case. */
   private void setupTest()
   {
-    testCo1 = new CommanderStrong();
-    testCo2 = new CommanderPatch();
+    GameScenario scn = new GameScenario();
+    testCo1 = new Strong(scn.rules);
+    testCo2 = new Patch(scn.rules);
     Commander[] cos = { testCo1, testCo2 };
 
     testMap = new MapMaster(cos, MapLibrary.getByName("Firing Range"));

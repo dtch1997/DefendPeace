@@ -1,6 +1,5 @@
 package CommandingOfficers;
 
-import java.awt.Color;
 import java.util.ArrayList;
 
 public class CommanderLibrary
@@ -19,20 +18,12 @@ public class CommanderLibrary
   private static void buildCommanderList()
   {
     commanderList = new ArrayList<CommanderInfo>();
-    commanderList.add( CommanderStrong.getInfo() );
-    commanderList.add( CommanderPatch.getInfo() );
-    commanderList.add( CommanderVenge.getInfo() );
-    commanderList.add( CommanderBear_Bull.getInfo() );
-    commanderList.add( CommanderCinder.getInfo() );
-    commanderList.add( CommanderAve.getInfo() );
-  }
-
-  public static Commander makeCommander( CommanderInfo info, Color color )
-  {
-    Commander co = info.maker.create();
-
-    co.myColor = color;
-
-    return co;
+    commanderList.add( Strong.getInfo() );
+    commanderList.add( Patch.getInfo() );
+    commanderList.add( Venge.getInfo() );
+    commanderList.add( Meridian.getInfo() );
+    commanderList.add( Bear_Bull.getInfo() );
+    commanderList.add( Cinder.getInfo() );
+    commanderList.add( Ave.getInfo() );
   }
 }

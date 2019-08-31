@@ -2,12 +2,13 @@ package Test;
 
 import java.util.ArrayList;
 
+import CommandingOfficers.Ave;
 import CommandingOfficers.Commander;
 import CommandingOfficers.CommanderAbility;
-import CommandingOfficers.CommanderAve;
-import CommandingOfficers.CommanderPatch;
+import CommandingOfficers.Patch;
 import Engine.GameAction;
 import Engine.GameInstance;
+import Engine.GameScenario;
 import Engine.Utils;
 import Engine.XYCoord;
 import Engine.GameEvents.GameEvent;
@@ -24,14 +25,15 @@ import Units.UnitModel.UnitEnum;
 public class TestCommanderAve extends TestCase
 {
   private Commander Patch;
-  private CommanderAve Ave;
+  private Ave Ave;
   private MapMaster testMap;
   private GameInstance game;
 
   private void setupTest()
   {
-    Ave = new CommanderAve();
-    Patch = new CommanderPatch();
+    GameScenario scn = new GameScenario();
+    Ave = new Ave(scn.rules);
+    Patch = new Patch(scn.rules);
     Commander[] cos = { Ave, Patch };
 
     testMap = new MapMaster(cos, MapLibrary.getByName("Firing Range"));
@@ -75,7 +77,7 @@ public class TestCommanderAve extends TestCase
     infantry.initTurn(testMap);
     performGameAction(capture, testMap);
 
-    testPassed &= validate(Ave.getSnowMapClone()[city.xCoord][city.yCoord] == CommanderAve.SNOW_THRESHOLD, "    Ave doesn't have 1 snow in city after capture");
+    testPassed &= validate(Ave.getSnowMapClone()[city.xCoord][city.yCoord] == CommandingOfficers.Ave.SNOW_THRESHOLD, "    Ave doesn't have 1 snow in city after capture");
 
     return testPassed;
   }

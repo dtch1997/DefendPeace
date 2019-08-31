@@ -23,6 +23,7 @@ public class TestMain extends TestCase
   {
     boolean testsPassed = true;
     testsPassed &= validate(new TestUnitMovement().runTest(), "Unit movement test failed!");
+    testsPassed &= validate(new TestVisionMechanics().runTest(), "Vision mechanics test failed!");
     testsPassed &= validate(new TestTransport().runTest(), "Transport test failed!");
     testsPassed &= validate(new TestCombat().runTest(), "Combat test failed!");
     testsPassed &= validate(new TestCombatMods().runTest(), "Combat modification test failed!");
@@ -31,7 +32,6 @@ public class TestMain extends TestCase
     testsPassed &= validate(new TestInputHandler().runTest(), "InputHandler test failed!");
     testsPassed &= validate(new TestCapture().runTest(), "Capture test failed!");
     testsPassed &= validate(new TestGameEvent().runTest(), "GameEvent test failed!");
-    testsPassed &= validate(new TestDamageStrategy().runTest(), "DamageStrategy test failed!");
     testsPassed &= validate(new TestCOModifier().runTest(), "COModifier test failed!");
     testsPassed &= validate(new TestCommanderAve().runTest(), "CommanderAve test failed!");
     System.out.println("All tests completed.");

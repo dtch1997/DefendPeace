@@ -4,13 +4,18 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.imageio.ImageIO;
+
 import CommandingOfficers.Commander;
 import Terrain.Location;
 import Terrain.TerrainType;
+import UI.UIUtils;
+import UI.UIUtils.Faction;
 import Units.Unit;
 import Units.UnitModel;
 
@@ -22,53 +27,7 @@ public class SpriteLibrary
   // This is the physical size of a single map square in pixels.
   public static final int baseSpriteSize = 16;
 
-  // Define extra colors as needed.
-  private static final Color PURPLE = new Color(231, 123, 255 );
-
-  // Map Building colors.
-  public static final Color[] defaultMapColors = { new Color(40, 40, 40), new Color(70, 70, 70), new Color(110, 110, 110), new Color(160, 160, 160),
-      new Color(200, 200, 200), new Color(231, 231, 231) };
-  private static Color[] pinkMapBuildingColors = { new Color(142, 26, 26), new Color(255, 219, 74), new Color(190, 90, 90), new Color(240, 140, 140),
-      new Color(250, 190, 190), new Color(255, 245, 245) };
-  private static Color[] cyanMapBuildingColors = { new Color(0, 105, 105), new Color(255, 219, 74), new Color(77, 157, 157), new Color(130, 200, 200),
-      new Color(200, 230, 230), new Color(245, 255, 255) };
-  private static Color[] orangeMapBuildingColors = { new Color(130, 56, 0), new Color(255, 237, 29), new Color(139, 77, 20), new Color(231, 139, 41),
-      new Color(243, 186, 121), new Color(255, 234, 204) };
-  private static Color[] purpleMapBuildingColors = { new Color(90, 14, 99), new Color(255, 207, 95), new Color(133, 65, 130), new Color(174, 115, 189),
-    new Color(222, 171, 240), new Color(255, 231, 255) };
-
-  // Map Unit colors.
-  private static Color[] pinkMapUnitColors = { new Color(142, 26, 26), new Color(199, 62, 62), new Color(248, 100, 100), new Color(255, 136, 136),
-      new Color(255, 175, 175), new Color(255, 201, 201) };
-  private static Color[] cyanMapUnitColors = { new Color(0, 105, 105), new Color(0, 170, 170), new Color(0, 215, 215), new Color(0, 245, 245),
-      new Color(121, 255, 255), new Color(195, 255, 255), };
-  private static Color[] orangeMapUnitColors = { new Color(130, 56, 0), new Color(204, 103, 7), new Color(245, 130, 14), new Color(255, 160, 30),
-      new Color(255, 186, 60), new Color(255, 225, 142), };
-  private static Color[] purpleMapUnitColors = { new Color(90, 14, 99), new Color(132, 41, 148), new Color(181, 62, 198), new Color(201, 98, 223),
-    new Color(231, 123, 255), new Color(243, 180, 255), };
-
-  private static HashMap<Color, ColorPalette> buildingColorPalettes = new HashMap<Color, ColorPalette>(){
-    private static final long serialVersionUID = 1L;
-    {
-      // Create a mapping of game colors to the fine-tuned colors that will be used for map sprites.
-      put(Color.PINK, new ColorPalette(pinkMapBuildingColors));
-      put(Color.CYAN, new ColorPalette(cyanMapBuildingColors));
-      put(Color.ORANGE, new ColorPalette(orangeMapBuildingColors));
-      put(PURPLE, new ColorPalette(purpleMapBuildingColors));
-    }
-  };
-  private static HashMap<Color, ColorPalette> mapUnitColorPalettes = new HashMap<Color, ColorPalette>(){
-    private static final long serialVersionUID = 1L;
-    {
-      // Create a mapping of game colors to the fine-tuned colors that will be used for map sprites.
-      put(Color.PINK, new ColorPalette(pinkMapUnitColors));
-      put(Color.CYAN, new ColorPalette(cyanMapUnitColors));
-      put(Color.ORANGE, new ColorPalette(orangeMapUnitColors));
-      put(PURPLE, new ColorPalette(purpleMapUnitColors));
-    }
-  };
-
-  public static final Color[] coColorList = { Color.PINK, Color.CYAN, Color.ORANGE, PURPLE };
+  public static final String charKey = "%./-~,;:!?'&()";
 
   private static HashMap<SpriteSetKey, TerrainSpriteSet> spriteSetMap = new HashMap<SpriteSetKey, TerrainSpriteSet>();
   private static HashMap<UnitSpriteSetKey, UnitSpriteSet> mapUnitSpriteSetMap = new HashMap<UnitSpriteSetKey, UnitSpriteSet>();
@@ -95,11 +54,16 @@ public class SpriteLibrary
   private static Sprite letterSpritesUppercase = null;
   private static Sprite letterSpritesLowercase = null;
   private static Sprite numberSprites = null;
+  private static Sprite symbolSprites = null;
 
   // Letters for writing in menus.
   private static Sprite letterSpritesSmallCaps = null;
   private static Sprite numberSpritesSmallCaps = null;
   private static Sprite symbolSpritesSmallCaps = null;
+
+  // Cursor for highlighting things in-game.
+  private static Sprite cursorSprites = null;
+  private static Sprite arrowheadSprites = null;
 
   // Commander overlay backdrops (shows commander name and funds) for each Commander in the game.
   private static HashMap<Commander, Sprite> coOverlays = new HashMap<Commander, Sprite>();
@@ -113,6 +77,29 @@ public class SpriteLibrary
   // Victory/Defeat text for game end.
   private static BufferedImage gameOverDefeatText = null;
   private static BufferedImage gameOverVictoryText = null;
+
+  /**
+   * Loads the image at the given file location and returns it as a BufferedImage.
+   * @param filename The full file-path to an image on disk.
+   * @return The file as a BufferedImage, or null if the file cannot be read.
+   */
+  public static BufferedImage loadSpriteSheetFile(String filename)
+  {
+    BufferedImage bi = null;
+    try
+    {
+      File imgFile = new File(filename);
+      if( imgFile.exists() && !imgFile.isDirectory() )
+        bi = ImageIO.read(imgFile);
+      else System.out.println("WARNING! Resource file " + filename + " does not exist.");
+    }
+    catch (IOException ioex)
+    {
+      System.out.println("WARNING! Exception loading resource file " + filename);
+      bi = null;
+    }
+    return bi;
+  }
 
   /**
    * Retrieve (loading if needed) the sprites associated with the given terrain type. For ownable terrain types
@@ -154,7 +141,6 @@ public class SpriteLibrary
   private static void createTerrainSpriteSet(SpriteSetKey spriteKey)
   {
     TerrainType terrainType = spriteKey.terrainKey;
-    System.out.println("INFO: Loading terrain sprites for " + terrainType);
 
     String tileSpritesheetLocations = "res/tileset";
     String formatString = tileSpritesheetLocations + "/%s_%s.png";
@@ -274,7 +260,7 @@ public class SpriteLibrary
   {
     if( moveCursorLineSprite == null )
     {
-      moveCursorLineSprite = new Sprite(SpriteUIUtils.loadSpriteSheetFile("res/tileset/moveCursorLine.png"), baseSpriteSize, baseSpriteSize);
+      moveCursorLineSprite = new Sprite(SpriteLibrary.loadSpriteSheetFile("res/tileset/moveCursorLine.png"), baseSpriteSize, baseSpriteSize);
     }
 
     return moveCursorLineSprite;
@@ -284,20 +270,10 @@ public class SpriteLibrary
   {
     if( moveCursorArrowSprite == null )
     {
-      moveCursorArrowSprite = new Sprite(SpriteUIUtils.loadSpriteSheetFile("res/tileset/moveCursorArrow.png"), baseSpriteSize, baseSpriteSize);
+      moveCursorArrowSprite = new Sprite(SpriteLibrary.loadSpriteSheetFile("res/tileset/moveCursorArrow.png"), baseSpriteSize, baseSpriteSize);
     }
 
     return moveCursorArrowSprite;
-  }
-
-  public static ColorPalette getBuildingColors(Color colorKey)
-  {
-    return buildingColorPalettes.get(colorKey);
-  }
-
-  public static ColorPalette getMapUnitColors(Color colorKey)
-  {
-    return mapUnitColorPalettes.get(colorKey);
   }
 
   private static class SpriteSetKey
@@ -339,21 +315,23 @@ public class SpriteLibrary
   private static class UnitSpriteSetKey
   {
     public final UnitModel.UnitEnum unitTypeKey;
-    public final Commander commanderKey;
+    public final Faction factionKey;
+    public final Color colorKey;
     private static ArrayList<UnitSpriteSetKey> instances = new ArrayList<UnitSpriteSetKey>();
 
-    private UnitSpriteSetKey(UnitModel.UnitEnum unitType, Commander co)
+    private UnitSpriteSetKey(UnitModel.UnitEnum unitType, Faction faction, Color color)
     {
       unitTypeKey = unitType;
-      commanderKey = co;
+      factionKey = faction;
+      colorKey = color;
     }
 
-    public static UnitSpriteSetKey instance(UnitModel.UnitEnum unitType, Commander co)
+    public static UnitSpriteSetKey instance(UnitModel.UnitEnum unitType, Faction faction, Color color)
     {
       UnitSpriteSetKey key = null;
       for( int i = 0; i < instances.size(); ++i )
       {
-        if( instances.get(i).unitTypeKey == unitType && instances.get(i).commanderKey == co )
+        if( instances.get(i).unitTypeKey == unitType && instances.get(i).factionKey == faction && instances.get(i).colorKey == color)
         {
           key = instances.get(i);
           break;
@@ -361,7 +339,7 @@ public class SpriteLibrary
       }
       if( key == null )
       {
-        key = new UnitSpriteSetKey(unitType, co);
+        key = new UnitSpriteSetKey(unitType, faction, color);
         instances.add(key);
       }
       return key;
@@ -370,7 +348,12 @@ public class SpriteLibrary
 
   public static UnitSpriteSet getMapUnitSpriteSet(Unit unit)
   {
-    UnitSpriteSetKey key = UnitSpriteSetKey.instance(unit.model.type, unit.CO);
+    return getMapUnitSpriteSet(unit.model.type, unit.CO.faction, unit.CO.myColor);
+  }
+
+  public static UnitSpriteSet getMapUnitSpriteSet(UnitModel.UnitEnum type, Faction faction, Color color)
+  {
+    UnitSpriteSetKey key = UnitSpriteSetKey.instance(type, faction, color);
     if( !mapUnitSpriteSetMap.containsKey(key) )
     {
       // We don't have it? Go load it.
@@ -382,17 +365,20 @@ public class SpriteLibrary
 
   private static void createMapUnitSpriteSet(UnitSpriteSetKey key)
   {
-    System.out.println("creating " + key.unitTypeKey.toString() + " spriteset for CO " + key.commanderKey.myColor.toString());
-    String filestr = getMapUnitSpriteFilename(key.unitTypeKey);
-    UnitSpriteSet spriteSet = new UnitSpriteSet(SpriteUIUtils.loadSpriteSheetFile(filestr), baseSpriteSize, baseSpriteSize,
-        getMapUnitColors(key.commanderKey.myColor));
+    Faction faction = key.factionKey;
+    String filestr = getMapUnitSpriteFilename(key.unitTypeKey, faction.name);
+    if (!new File(filestr).canRead())
+      filestr = getMapUnitSpriteFilename(key.unitTypeKey, faction.basis);
+    UnitSpriteSet spriteSet = new UnitSpriteSet(SpriteLibrary.loadSpriteSheetFile(filestr), baseSpriteSize, baseSpriteSize,
+        UIUtils.getMapUnitColors(key.colorKey));
     mapUnitSpriteSetMap.put(key, spriteSet);
   }
 
-  private static String getMapUnitSpriteFilename(UnitModel.UnitEnum unitType)
+  private static String getMapUnitSpriteFilename(UnitModel.UnitEnum unitType, String faction)
   {
     StringBuffer spriteFile = new StringBuffer();
-    spriteFile.append("res/unit/").append(unitType.toString().toLowerCase()).append("_map.png");
+    spriteFile.append("res/unit/faction/").append(faction).append("/");
+    spriteFile.append(unitType.toString().toLowerCase()).append("_map.png");
     return spriteFile.toString();
   }
 
@@ -400,7 +386,7 @@ public class SpriteLibrary
   {
     if( null == mapUnitHPSprites )
     {
-      mapUnitHPSprites = new Sprite(SpriteUIUtils.loadSpriteSheetFile("res/unit/icon/hp.png"), 8, 8);
+      mapUnitHPSprites = new Sprite(SpriteLibrary.loadSpriteSheetFile("res/unit/icon/hp.png"), 8, 8);
     }
     return mapUnitHPSprites;
   }
@@ -409,7 +395,7 @@ public class SpriteLibrary
   {
     if( null == mapUnitLetterSprites )
     {
-      mapUnitLetterSprites = new Sprite(SpriteUIUtils.loadSpriteSheetFile("res/unit/icon/alphabet.png"), 8, 8);
+      mapUnitLetterSprites = new Sprite(SpriteLibrary.loadSpriteSheetFile("res/unit/icon/alphabet.png"), 8, 8);
     }
     return mapUnitLetterSprites;
   }
@@ -454,7 +440,7 @@ public class SpriteLibrary
   {
     if( null == mapUnitCargoIcon )
     {
-      mapUnitCargoIcon = SpriteUIUtils.loadSpriteSheetFile("res/unit/icon/cargo.png");
+      mapUnitCargoIcon = SpriteLibrary.loadSpriteSheetFile("res/unit/icon/cargo.png");
     }
     return mapUnitCargoIcon;
   }
@@ -463,7 +449,7 @@ public class SpriteLibrary
   {
     if( null == mapUnitStunIcon )
     {
-      mapUnitStunIcon = SpriteUIUtils.loadSpriteSheetFile("res/unit/icon/stun.png");
+      mapUnitStunIcon = SpriteLibrary.loadSpriteSheetFile("res/unit/icon/stun.png");
     }
     return mapUnitStunIcon;
   }
@@ -472,7 +458,7 @@ public class SpriteLibrary
   {
     if( null == mapUnitCaptureIcon )
     {
-      mapUnitCaptureIcon = SpriteUIUtils.loadSpriteSheetFile("res/unit/icon/capture.png");
+      mapUnitCaptureIcon = SpriteLibrary.loadSpriteSheetFile("res/unit/icon/capture.png");
     }
     return mapUnitCaptureIcon;
   }
@@ -491,7 +477,7 @@ public class SpriteLibrary
   {
     if( null == letterSpritesUppercase )
     {
-      letterSpritesUppercase = new Sprite(SpriteUIUtils.loadSpriteSheetFile("res/ui/main/letters_uppercase.png"), 5, 11);
+      letterSpritesUppercase = new Sprite(SpriteLibrary.loadSpriteSheetFile("res/ui/main/letters_uppercase.png"), 5, 11);
     }
     return letterSpritesUppercase;
   }
@@ -506,7 +492,7 @@ public class SpriteLibrary
   {
     if( null == letterSpritesLowercase )
     {
-      letterSpritesLowercase = new Sprite(SpriteUIUtils.loadSpriteSheetFile("res/ui/main/letters_lowercase.png"), 5, 11);
+      letterSpritesLowercase = new Sprite(SpriteLibrary.loadSpriteSheetFile("res/ui/main/letters_lowercase.png"), 5, 11);
     }
     return letterSpritesLowercase;
   }
@@ -521,9 +507,24 @@ public class SpriteLibrary
   {
     if( null == numberSprites )
     {
-      numberSprites = new Sprite(SpriteUIUtils.loadSpriteSheetFile("res/ui/main/numbers.png"), 5, 11);
+      numberSprites = new Sprite(SpriteLibrary.loadSpriteSheetFile("res/ui/main/numbers.png"), 5, 11);
     }
     return numberSprites;
+  }
+
+  /**
+   * This function returns the sprite sheet for symbol characters that go along with
+   * the standard letter sprites. The image is loaded on the first
+   * call to this function, and simply returned thereafter.
+   * @return A Sprite object containing the in-game menu font for normal symbols.
+   */
+  public static Sprite getSymbols()
+  {
+    if( null == symbolSprites )
+    {
+      symbolSprites = new Sprite(SpriteLibrary.loadSpriteSheetFile("res/ui/main/symbols.png"), 5, 11);
+    }
+    return symbolSprites;
   }
 
   /**
@@ -536,7 +537,7 @@ public class SpriteLibrary
   {
     if( null == letterSpritesSmallCaps )
     {
-      letterSpritesSmallCaps = new Sprite(SpriteUIUtils.loadSpriteSheetFile("res/ui/letters.png"), 5, 6);
+      letterSpritesSmallCaps = new Sprite(SpriteLibrary.loadSpriteSheetFile("res/ui/letters.png"), 5, 6);
     }
     return letterSpritesSmallCaps;
   }
@@ -552,7 +553,7 @@ public class SpriteLibrary
   {
     if( null == numberSpritesSmallCaps )
     {
-      numberSpritesSmallCaps = new Sprite(SpriteUIUtils.loadSpriteSheetFile("res/ui/numbers.png"), 5, 6);
+      numberSpritesSmallCaps = new Sprite(SpriteLibrary.loadSpriteSheetFile("res/ui/numbers.png"), 5, 6);
     }
     return numberSpritesSmallCaps;
   }
@@ -561,109 +562,48 @@ public class SpriteLibrary
    * This function returns the sprite sheet for symbol characters that go along with
    * the letter sprites from getLettersSmallCaps(). The image is loaded on the first
    * call to this function, and simply returned thereafter.
-   * @return A Sprite object containing the in-game menu font for small-caps numbers.
+   * @return A Sprite object containing the in-game menu font for small-caps symbols.
    */
   public static Sprite getSymbolsSmallCaps()
   {
     if( null == symbolSpritesSmallCaps )
     {
-      symbolSpritesSmallCaps = new Sprite(SpriteUIUtils.loadSpriteSheetFile("res/ui/symbols.png"), 5, 6);
+      symbolSpritesSmallCaps = new Sprite(SpriteLibrary.loadSpriteSheetFile("res/ui/symbols.png"), 5, 6);
     }
     return symbolSpritesSmallCaps;
   }
 
-  /**
-   * Draws the provided text at the provided location, using the standard alphanumeric sprite set.
-   * @param g Graphics object to draw the text.
-   * @param text Text to be drawn as sprited letters.
-   * @param x X-coordinate of the top-left corner of the first letter to be drawn.
-   * @param y Y-coordinate of the top-left corner of the first letter to be drawn.
-   * @param scale Scaling factor to be applied when drawing.
-   */
-  public static void drawText(Graphics g, String text, int x, int y, int scale)
+  private static HashMap<Color, Sprite> coloredCursors;
+  public static Sprite getCursorSprites(Color color)
   {
-    Sprite uppercase = getLettersUppercase();
-    Sprite lowercase = getLettersLowercase();
-    int menuTextWidth = uppercase.getFrame(0).getWidth() * scale;
-    int menuTextHeight = uppercase.getFrame(0).getHeight() * scale;
-
-    for( int i = 0; i < text.length(); ++i, x += menuTextWidth )
+    if( null == coloredCursors )
     {
-      char thisChar = text.charAt(i);
-      if( Character.isAlphabetic(thisChar) )
-      {
-        if( Character.isUpperCase(thisChar) )
-        {
-          int letterIndex = thisChar - 'A';
-          g.drawImage(uppercase.getFrame(letterIndex), x, y, menuTextWidth, menuTextHeight, null);
-        }
-        else
-        {
-          int letterIndex = thisChar - 'a';
-          g.drawImage(lowercase.getFrame(letterIndex), x, y, menuTextWidth, menuTextHeight, null);
-        }
-      }
-      else if( Character.isDigit(thisChar) )
-      {
-        int letterIndex = thisChar - '0';
-        g.drawImage(getNumbers().getFrame(letterIndex), x, y, menuTextWidth, menuTextHeight, null);
-      }
+      coloredCursors = new HashMap<Color, Sprite>();
     }
+    if( !coloredCursors.containsKey(color) )
+    {
+      Sprite newCursor = new Sprite(SpriteLibrary.getCursorSprites());
+      newCursor.colorize(UIUtils.defaultMapColors[4], color);
+      coloredCursors.put(color, newCursor);
+    }
+    return coloredCursors.get(color);
+  }
+  public static Sprite getCursorSprites()
+  {
+    if( null == cursorSprites )
+    {
+      cursorSprites = new Sprite(SpriteLibrary.loadSpriteSheetFile("res/ui/cursor.png"), 6, 6);
+    }
+    return cursorSprites;
   }
 
-  /**
-   * Draws the provided text at the provided location, using the small-caps alphanumeric sprite set.
-   * @param g Graphics object to draw the text.
-   * @param text Text to be drawn as sprited letters.
-   * @param x X-coordinate of the top-left corner of the first letter to be drawn.
-   * @param y Y-coordinate of the top-left corner of the first letter to be drawn.
-   * @param scale Scaling factor to be applied when drawing.
-   */
-  public static void drawTextSmallCaps(Graphics g, String text, int x, int y, int scale)
+  static Sprite getArrowheadSprites()
   {
-    Sprite smallCaps = getLettersSmallCaps();
-    int menuTextWidth = smallCaps.getFrame(0).getWidth() * scale;
-    int menuTextHeight = smallCaps.getFrame(0).getHeight() * scale;
-    text = text.toUpperCase(); // SmallCaps is all uppercase.
-
-    for( int i = 0; i < text.length(); ++i, x += menuTextWidth )
+    if( null == arrowheadSprites )
     {
-      if( Character.isAlphabetic(text.charAt(i)) )
-      {
-        int letterIndex = text.charAt(i) - 'A';
-        g.drawImage(smallCaps.getFrame(letterIndex), x, y, menuTextWidth, menuTextHeight, null);
-      }
-      else if( Character.isDigit(text.charAt(i)) )
-      {
-        int letterIndex = text.charAt(i) - '0';
-        g.drawImage(getNumbersSmallCaps().getFrame(letterIndex), x, y, menuTextWidth, menuTextHeight, null);
-      }
-      else // Assume symbolic
-      {
-        final String charKey = "%./-~,;:!?‽&()";
-        int symbolIndex = charKey.indexOf(text.charAt(i));
-        if( symbolIndex >= 0 )
-        {
-          g.drawImage(getSymbolsSmallCaps().getFrame(symbolIndex), x, y, menuTextWidth, menuTextHeight, null);
-        }
-      }
+      arrowheadSprites = new Sprite(SpriteLibrary.loadSpriteSheetFile("res/ui/arrowheads.png"), 10, 10);
     }
-  }
-
-  /**
-   * Draws the provided image, centered around x, y.
-   */
-  public static void drawImageCenteredOnPoint(Graphics g, BufferedImage image, int x, int y, int drawScale)
-  {
-    // Calculate the size to draw.
-    int drawWidth = image.getWidth() * drawScale;
-    int drawHeight = image.getHeight() * drawScale;
-
-    // Center over the target location.
-    int drawX = x - drawWidth / 2;
-    int drawY = y - drawHeight / 2;
-
-    g.drawImage(image, drawX, drawY, drawWidth, drawHeight, null);
+    return arrowheadSprites;
   }
 
   /**
@@ -680,8 +620,8 @@ public class SpriteLibrary
       final int OVERLAY_HEIGHT = 20;
 
       // If we don't already have this overlay, go load and store it.
-      Sprite overlay = new Sprite(SpriteUIUtils.loadSpriteSheetFile("res/ui/co_overlay.png"), OVERLAY_WIDTH, OVERLAY_HEIGHT);
-      overlay.colorize(defaultMapColors, mapUnitColorPalettes.get(co.myColor).paletteColors);
+      Sprite overlay = new Sprite(SpriteLibrary.loadSpriteSheetFile("res/ui/co_overlay.png"), OVERLAY_WIDTH, OVERLAY_HEIGHT);
+      overlay.colorize(UIUtils.defaultMapColors, UIUtils.getMapUnitColors(co.myColor).paletteColors);
 
       // Draw the Commander's mug on top of the overlay.
       BufferedImage coMug = getCommanderSprites(co.coInfo.name).eyes;
@@ -705,7 +645,7 @@ public class SpriteLibrary
     Graphics barGfx = bar.getGraphics();
 
     // Get the CO's colors
-    Color[] palette = SpriteLibrary.mapUnitColorPalettes.get(co.myColor).paletteColors;
+    Color[] palette = UIUtils.getMapUnitColors(co.myColor).paletteColors;
 
     // Draw the bar
     barGfx.setColor(Color.BLACK);               // Outside edge
@@ -731,8 +671,8 @@ public class SpriteLibrary
     {
       // Image should be: empty bar, full bar, empty point, 1/3 point, 2/3 point, full point, large point.
       // Image should be: empty point, 1/3 point, 2/3 point, full point, large point.
-      Sprite overlay = new Sprite(SpriteUIUtils.loadSpriteSheetFile("res/ui/powerbar_pieces.png"), POWERBAR_FRAME_WIDTH, POWERBAR_FRAME_HEIGHT);
-      overlay.colorize(defaultMapColors, mapUnitColorPalettes.get(co.myColor).paletteColors);
+      Sprite overlay = new Sprite(SpriteLibrary.loadSpriteSheetFile("res/ui/powerbar_pieces.png"), POWERBAR_FRAME_WIDTH, POWERBAR_FRAME_HEIGHT);
+      overlay.colorize(UIUtils.defaultMapColors, UIUtils.getMapUnitColors(co.myColor).paletteColors);
 
       coPowerBarPieces.put(co, overlay);
     }
@@ -789,7 +729,7 @@ public class SpriteLibrary
   {
     if( null == actionCursor )
     {
-      actionCursor = SpriteUIUtils.loadSpriteSheetFile("res/tileset/cursor_action.png");
+      actionCursor = SpriteLibrary.loadSpriteSheetFile("res/tileset/cursor_action.png");
       if( null == actionCursor )
       {
         actionCursor = createDefaultBlankSprite(baseSpriteSize, baseSpriteSize);
@@ -807,9 +747,10 @@ public class SpriteLibrary
   {
     if( null == menuOptionsSprite )
     {
-      menuOptionsSprite = new Sprite(createBlankImageIfNull(SpriteUIUtils.loadSpriteSheetFile("res/ui/main/newgame.png")));
-      menuOptionsSprite.addFrame(createBlankImageIfNull(SpriteUIUtils.loadSpriteSheetFile("res/ui/main/options.png")));
-      menuOptionsSprite.addFrame(createBlankImageIfNull(SpriteUIUtils.loadSpriteSheetFile("res/ui/main/quit.png")));
+      menuOptionsSprite = new Sprite(createBlankImageIfNull(SpriteLibrary.loadSpriteSheetFile("res/ui/main/newgame.png")));
+      menuOptionsSprite.addFrame(createBlankImageIfNull(SpriteLibrary.loadSpriteSheetFile("res/ui/main/continue.png")));
+      menuOptionsSprite.addFrame(createBlankImageIfNull(SpriteLibrary.loadSpriteSheetFile("res/ui/main/options.png")));
+      menuOptionsSprite.addFrame(createBlankImageIfNull(SpriteLibrary.loadSpriteSheetFile("res/ui/main/quit.png")));
     }
     return menuOptionsSprite;
   }
@@ -818,7 +759,7 @@ public class SpriteLibrary
   {
     if(null == gameOverDefeatText)
     {
-      gameOverDefeatText = SpriteUIUtils.loadSpriteSheetFile("res/ui/defeat.png");
+      gameOverDefeatText = SpriteLibrary.loadSpriteSheetFile("res/ui/defeat.png");
     }
     return gameOverDefeatText;
   }
@@ -827,7 +768,7 @@ public class SpriteLibrary
   {
     if(null == gameOverVictoryText)
     {
-      gameOverVictoryText = SpriteUIUtils.loadSpriteSheetFile("res/ui/victory.png");
+      gameOverVictoryText = SpriteLibrary.loadSpriteSheetFile("res/ui/victory.png");
     }
     return gameOverVictoryText;
   }
@@ -852,9 +793,9 @@ public class SpriteLibrary
       String headString = ((new File(baseFileName + "_face.png").isFile())? baseFileName : basePlaceholder) + "_face.png";
       String eyesString = ((new File(baseFileName + "_eyes.png").isFile())? baseFileName : basePlaceholder) + "_eyes.png";
 
-      BufferedImage body = createBlankImageIfNull(SpriteUIUtils.loadSpriteSheetFile(bodyString));
-      BufferedImage head = createBlankImageIfNull(SpriteUIUtils.loadSpriteSheetFile(headString));
-      BufferedImage eyes = createBlankImageIfNull(SpriteUIUtils.loadSpriteSheetFile(eyesString));
+      BufferedImage body = createBlankImageIfNull(SpriteLibrary.loadSpriteSheetFile(bodyString));
+      BufferedImage head = createBlankImageIfNull(SpriteLibrary.loadSpriteSheetFile(headString));
+      BufferedImage eyes = createBlankImageIfNull(SpriteLibrary.loadSpriteSheetFile(eyesString));
 
       coSpriteSets.put(whichCo, new CommanderSpriteSet(body, head, eyes));
     }

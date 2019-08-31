@@ -1,8 +1,10 @@
 package Engine;
 
-public class XYCoord
-{
+import java.io.Serializable;
 
+public class XYCoord implements Serializable
+{
+  private static final long serialVersionUID = 1L;
   public final int xCoord;
   public final int yCoord;
 
@@ -15,6 +17,15 @@ public class XYCoord
   public boolean equals(int x, int y)
   {
     return x == xCoord && y == yCoord;
+  }
+  
+  public int getDistance(XYCoord other)
+  {
+    return getDistance(other.xCoord, other.yCoord);
+  }
+  public int getDistance(int x, int y)
+  {
+    return Math.abs(xCoord - x) + Math.abs(yCoord - y);
   }
 
   @Override
